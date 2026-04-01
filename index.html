@@ -1,93 +1,34 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STRATOS CRM</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-</head>
-<body class="bg-black text-white font-sans">
-    <div id="app" class="p-10">
-        
-        <div class="flex justify-between items-center mb-10 border-b border-white/10 pb-5">
-            <h1 class="text-3xl font-black italic">STRATOS CRM</h1>
-            <button @click="openModal" class="bg-white text-black px-6 py-2 rounded-full font-bold hover:bg-gray-200 transition">
-                + NOUVEAU CLIENT
-            </button>
-        </div>
+<script>
+    const { createApp, ref, onMounted } = Vue;
 
-        <div class="grid gap-4">
-            <div v-for="c in companies" :key="c.id" class="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                <p class="font-bold text-xl">{{ c.name }}</p>
-                <p class="text-gray-500 text-sm uppercase tracking-widest">{{ c.industry }}</p>
-            </div>
-            <div v-if="companies.length === 0" class="text-center py-20 text-gray-700 italic">
-                Aucun client trouvé. Cliquez sur le bouton en haut pour en ajouter un.
-            </div>
-        </div>
+    const SUPABASE_URL = 'https://ufecxdwqmhkxhsfmwrfn.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_nnGYFPU5nAEiTda2RIDo9g_923K_NnO';
+    
+    // On utilise un nom différent pour éviter le conflit
+    const sbc = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        <div v-if="showModal" class="fixed inset-0 bg-black/90 flex items-center justify-center p-5 z-50">
-            <div class="bg-[#111] p-10 rounded-[2rem] border border-white/20 w-full max-w-md">
-                <h2 class="text-2xl font-bold mb-6">Ajouter un client</h2>
-                <input v-model="form.name" placeholder="Nom de l'entreprise" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl mb-4 outline-none focus:border-white">
-                <input v-model="form.industry" placeholder="Secteur (ex: Luxe, Tech)" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl mb-6 outline-none focus:border-white">
-                
-                <div class="flex space-x-4">
-                    <button @click="showModal = false" class="flex-1 text-gray-500 font-bold">Annuler</button>
-                    <button @click="saveClient" class="flex-1 bg-white text-black py-4 rounded-xl font-bold">Enregistrer</button>
-                </div>
-            </div>
-        </div>
+    createApp({
+        setup() {
+            const tab = ref('dashboard');
+            const isConnected = ref(false);
+            const companies = ref([]);
+            
+            const menu = [
+                { id: 'dashboard', label: 'Dashboard', icon: 'layout-grid' },
+                { id: 'projets', label: 'Missions', icon: 'briefcase' }
+            ];
 
-    </div>
+            const refreshData = async () => {
+                const { data, error } = await sbc.from('companies').select('*');
+                if (!error) {
+                    companies.value = data;
+                    isConnected.value = true;
+                }
+            };
 
-    <script>
-        const { createApp, ref, onMounted } = Vue;
+            onMounted(refreshData);
 
-        // TES INFOS SUPABASE
-        const URL = 'https://ufecxdwqmhkxhsfmwrfn.supabase.co';
-        const KEY = 'sb_publishable_nnGYFPU5nAEiTda2RIDo9g_923K_NnO';
-        const supabase = window.supabase.createClient(URL, KEY);
-
-        createApp({
-            setup() {
-                const showModal = ref(false);
-                const companies = ref([]);
-                const form = ref({ name: '', industry: '' });
-
-                const openModal = () => {
-                    console.log("Bouton cliqué !");
-                    showModal.value = true;
-                };
-
-                const loadData = async () => {
-                    const { data } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
-                    if (data) companies.value = data;
-                };
-
-                const saveClient = async () => {
-                    if (!form.value.name) return alert("Nom requis");
-                    
-                    const { error } = await supabase.from('companies').insert([
-                        { name: form.value.name, industry: form.value.industry }
-                    ]);
-
-                    if (error) {
-                        alert("Erreur Supabase : " + error.message);
-                    } else {
-                        form.value = { name: '', industry: '' };
-                        showModal.value = false;
-                        loadData();
-                    }
-                };
-
-                onMounted(loadData);
-
-                return { showModal, companies, form, openModal, saveClient };
-            }
-        }).mount('#app');
-    </script>
-</body>
-</html>
+            return { tab, menu, companies, isConnected, refreshData };
+        }
+    }).mount('#app');
+</script>
