@@ -1,34 +1,151 @@
-<script>
-    const { createApp, ref, onMounted } = Vue;
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STRATOS | CRM ULTIME</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.321.0/font/lucide.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { background: #050505; color: #eee; font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; }
+        .btn-main { background: white; color: black; font-weight: 700; transition: 0.2s; }
+        .btn-main:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255,255,255,0.1); }
+        .active-nav { background: rgba(255,255,255,0.1); color: white; border-left: 3px solid white; }
+    </style>
+</head>
+<body class="overflow-hidden">
+    <div id="app" class="flex h-screen w-full">
+        
+        <aside class="w-64 border-r border-white/5 bg-[#080808] flex flex-col">
+            <div class="p-8 text-2xl font-black italic tracking-tighter">STRATOS</div>
+            <nav class="flex-1 px-4 space-y-1">
+                <div v-for="m in menu" @click="tab = m.id" :class="['flex items-center space-x-3 p-4 rounded-xl cursor-pointer text-sm transition', tab === m.id ? 'active-nav' : 'text-gray-500 hover:text-white']">
+                    <i :class="'lucide-' + m.icon + ' w-4 h-4'"></i>
+                    <span>{{ m.label }}</span>
+                </div>
+            </nav>
+            <div class="p-6 border-t border-white/5 flex items-center space-x-2">
+                <div :class="['w-2 h-2 rounded-full', isConnected ? 'bg-green-500 shadow-[0_0_10px_green]' : 'bg-red-500']"></div>
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{{ isConnected ? 'Live' : 'Offline' }}</span>
+            </div>
+        </aside>
 
-    const SUPABASE_URL = 'https://ufecxdwqmhkxhsfmwrfn.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_nnGYFPU5nAEiTda2RIDo9g_923K_NnO';
-    
-    // On utilise un nom différent pour éviter le conflit
-    const sbc = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        <main class="flex-1 flex flex-col bg-black overflow-y-auto">
+            <header class="h-20 border-b border-white/5 flex items-center justify-between px-10 backdrop-blur-md">
+                <h2 class="text-xs font-black uppercase tracking-[0.4em] text-gray-500">{{ tab }}</h2>
+                <button @click="showModal = true" class="btn-main px-6 py-2 rounded-full text-[10px] uppercase tracking-widest">+ Nouveau Client</button>
+            </header>
 
-    createApp({
-        setup() {
-            const tab = ref('dashboard');
-            const isConnected = ref(false);
-            const companies = ref([]);
-            
-            const menu = [
-                { id: 'dashboard', label: 'Dashboard', icon: 'layout-grid' },
-                { id: 'projets', label: 'Missions', icon: 'briefcase' }
-            ];
+            <section class="p-10 space-y-10">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass p-8">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Clients</p>
+                        <h3 class="text-4xl font-bold mt-2">{{ companies.length }}</h3>
+                    </div>
+                    <div class="glass p-8">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Pipeline Actif</p>
+                        <h3 class="text-4xl font-bold mt-2">{{ pipelineTotal }} €</h3>
+                    </div>
+                    <div class="glass p-8 text-green-500">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Santé Business</p>
+                        <h3 class="text-4xl font-bold mt-2 italic">Optimal</h3>
+                    </div>
+                </div>
 
-            const refreshData = async () => {
-                const { data, error } = await sbc.from('companies').select('*');
-                if (!error) {
-                    companies.value = data;
-                    isConnected.value = true;
-                }
-            };
+                <div class="glass p-10">
+                    <h4 class="text-sm font-bold mb-6 flex items-center space-x-2">
+                        <i class="lucide-users w-4 h-4 text-gray-500"></i>
+                        <span>PORTEFEUILLE CLIENTS</span>
+                    </h4>
+                    <div class="space-y-3">
+                        <div v-for="c in companies" class="flex justify-between items-center p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/20 transition">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center font-bold text-white/40 italic">{{ c.name[0] }}</div>
+                                <div>
+                                    <p class="font-bold text-white leading-none">{{ c.name }}</p>
+                                    <p class="text-[10px] text-gray-600 uppercase tracking-widest mt-2">{{ c.industry }}</p>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-bold px-3 py-1 bg-green-500/10 text-green-500 rounded-full">ACTIF</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
 
-            onMounted(refreshData);
+        <div v-if="showModal" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[100] flex items-center justify-center p-6">
+            <div class="glass w-full max-w-md p-10 space-y-6">
+                <h3 class="text-xl font-bold italic tracking-tight">Ajouter un Client</h3>
+                <div class="space-y-4">
+                    <input v-model="form.name" type="text" placeholder="Nom de l'entreprise" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-white/30 transition">
+                    <input v-model="form.industry" type="text" placeholder="Secteur (ex: Luxe, Tech...)" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-white/30 transition">
+                </div>
+                <div class="flex space-x-3 pt-4">
+                    <button @click="showModal = false" class="flex-1 text-xs font-bold text-gray-500 uppercase">Annuler</button>
+                    <button @click="saveClient" class="btn-main flex-2 px-8 py-4 rounded-xl text-xs uppercase">Enregistrer</button>
+                </div>
+            </div>
+        </div>
 
-            return { tab, menu, companies, isConnected, refreshData };
-        }
-    }).mount('#app');
-</script>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, computed } = Vue;
+
+        // CONFIGURATION SUPABASE FIXE
+        const S_URL = 'https://ufecxdwqmhkxhsfmwrfn.supabase.co';
+        const S_KEY = 'sb_publishable_nnGYFPU5nAEiTda2RIDo9g_923K_NnO';
+        
+        // Nom de variable unique pour éviter tout conflit
+        const stratosDb = window.supabase.createClient(S_URL, S_KEY);
+
+        createApp({
+            setup() {
+                const tab = ref('dashboard');
+                const isConnected = ref(false);
+                const showModal = ref(false);
+                const companies = ref([]);
+                const form = ref({ name: '', industry: '' });
+
+                const menu = [
+                    { id: 'dashboard', label: 'Dashboard', icon: 'layout-grid' },
+                    { id: 'crm', label: 'Portefeuille', icon: 'users' },
+                    { id: 'finance', label: 'Finance', icon: 'credit-card' }
+                ];
+
+                const fetchData = async () => {
+                    const { data, error } = await stratosDb.from('companies').select('*').order('created_at', { ascending: false });
+                    if (!error) {
+                        companies.value = data;
+                        isConnected.value = true;
+                    } else {
+                        console.error("Erreur de chargement:", error);
+                    }
+                };
+
+                const saveClient = async () => {
+                    if (!form.value.name) return;
+                    const { error } = await stratosDb.from('companies').insert([form.value]);
+                    if (!error) {
+                        form.value = { name: '', industry: '' };
+                        showModal.value = false;
+                        await fetchData();
+                    }
+                };
+
+                const pipelineTotal = computed(() => {
+                    return new Intl.NumberFormat('fr-FR').format(0); // On pourra lier les opportunités plus tard
+                });
+
+                onMounted(fetchData);
+
+                return { tab, menu, companies, isConnected, showModal, form, saveClient, pipelineTotal };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
