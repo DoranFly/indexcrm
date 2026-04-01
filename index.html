@@ -3,90 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STRATOS | CRM ULTIME</title>
+    <title>STRATOS CRM | Ultimate Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.321.0/font/lucide.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { background: #050505; color: #eee; font-family: 'Plus Jakarta Sans', sans-serif; }
-        .glass { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; }
-        .btn-main { background: white; color: black; font-weight: 700; transition: 0.2s; }
-        .btn-main:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255,255,255,0.1); }
-        .active-nav { background: rgba(255,255,255,0.1); color: white; border-left: 3px solid white; }
+        body { background: #050505; color: #eee; font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); backdrop-filter: blur(10px); }
+        .sidebar-item { transition: all 0.2s; cursor: pointer; border-radius: 12px; }
+        .sidebar-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        .active-tab { background: white !important; color: black !important; font-weight: 800; shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        input, select { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; outline: none; }
+        input:focus { border-color: white !important; }
+        .stat-card { border-left: 2px solid rgba(255,255,255,0.1); }
     </style>
 </head>
-<body class="overflow-hidden">
+<body>
     <div id="app" class="flex h-screen w-full">
         
-        <aside class="w-64 border-r border-white/5 bg-[#080808] flex flex-col">
-            <div class="p-8 text-2xl font-black italic tracking-tighter">STRATOS</div>
-            <nav class="flex-1 px-4 space-y-1">
-                <div v-for="m in menu" @click="tab = m.id" :class="['flex items-center space-x-3 p-4 rounded-xl cursor-pointer text-sm transition', tab === m.id ? 'active-nav' : 'text-gray-500 hover:text-white']">
-                    <i :class="'lucide-' + m.icon + ' w-4 h-4'"></i>
-                    <span>{{ m.label }}</span>
+        <aside class="w-72 border-r border-white/5 flex flex-col bg-[#080808]">
+            <div class="p-10">
+                <div class="flex items-center space-x-3 mb-10">
+                    <div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center"><i class="lucide-zap text-black w-5 h-5"></i></div>
+                    <h1 class="text-xl font-black tracking-tighter uppercase italic">Stratos</h1>
                 </div>
-            </nav>
-            <div class="p-6 border-t border-white/5 flex items-center space-x-2">
-                <div :class="['w-2 h-2 rounded-full', isConnected ? 'bg-green-500 shadow-[0_0_10px_green]' : 'bg-red-500']"></div>
-                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{{ isConnected ? 'Live' : 'Offline' }}</span>
+                <nav class="space-y-2">
+                    <div v-for="m in menu" @click="tab = m.id" :class="['sidebar-item p-4 flex items-center space-x-4 text-sm', tab === m.id ? 'active-tab' : 'text-gray-500']">
+                        <i :class="'lucide-' + m.icon + ' w-5 h-5'"></i>
+                        <span>{{ m.label }}</span>
+                    </div>
+                </nav>
+            </div>
+            <div class="mt-auto p-10 text-[10px] text-gray-600 uppercase tracking-widest font-bold">
+                <div class="flex items-center space-x-2">
+                    <div :class="['w-2 h-2 rounded-full', isConnected ? 'bg-green-500' : 'bg-red-500']"></div>
+                    <span>System Live v2.0</span>
+                </div>
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col bg-black overflow-y-auto">
-            <header class="h-20 border-b border-white/5 flex items-center justify-between px-10 backdrop-blur-md">
-                <h2 class="text-xs font-black uppercase tracking-[0.4em] text-gray-500">{{ tab }}</h2>
-                <button @click="showModal = true" class="btn-main px-6 py-2 rounded-full text-[10px] uppercase tracking-widest">+ Nouveau Client</button>
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <header class="h-24 border-b border-white/5 flex items-center justify-between px-12">
+                <h2 class="text-2xl font-bold tracking-tight italic">{{ currentLabel }}</h2>
+                <button @click="openModal" class="bg-white text-black px-6 py-2.5 rounded-full text-[11px] font-black uppercase hover:scale-105 transition">
+                    + Ajouter {{ tab === 'dashboard' ? 'un client' : tab }}
+                </button>
             </header>
 
-            <section class="p-10 space-y-10">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="glass p-8">
-                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Clients</p>
-                        <h3 class="text-4xl font-bold mt-2">{{ companies.length }}</h3>
+            <div class="flex-1 overflow-y-auto p-12">
+                
+                <div v-if="tab === 'dashboard'" class="space-y-12">
+                    <div class="grid grid-cols-4 gap-6">
+                        <div v-for="s in stats" class="glass p-8 rounded-3xl stat-card">
+                            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">{{ s.label }}</p>
+                            <h3 class="text-3xl font-extrabold italic">{{ s.value }}</h3>
+                        </div>
                     </div>
-                    <div class="glass p-8">
-                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Pipeline Actif</p>
-                        <h3 class="text-4xl font-bold mt-2">{{ pipelineTotal }} €</h3>
-                    </div>
-                    <div class="glass p-8 text-green-500">
-                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Santé Business</p>
-                        <h3 class="text-4xl font-bold mt-2 italic">Optimal</h3>
-                    </div>
-                </div>
-
-                <div class="glass p-10">
-                    <h4 class="text-sm font-bold mb-6 flex items-center space-x-2">
-                        <i class="lucide-users w-4 h-4 text-gray-500"></i>
-                        <span>PORTEFEUILLE CLIENTS</span>
-                    </h4>
-                    <div class="space-y-3">
-                        <div v-for="c in companies" class="flex justify-between items-center p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/20 transition">
-                            <div class="flex items-center space-x-4">
-                                <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center font-bold text-white/40 italic">{{ c.name[0] }}</div>
-                                <div>
-                                    <p class="font-bold text-white leading-none">{{ c.name }}</p>
-                                    <p class="text-[10px] text-gray-600 uppercase tracking-widest mt-2">{{ c.industry }}</p>
+                    <div class="glass rounded-[2.5rem] p-10">
+                        <h4 class="text-lg font-bold mb-8 italic">Portefeuille Clients</h4>
+                        <div class="grid grid-cols-1 gap-4">
+                            <div v-for="c in companies" class="flex justify-between items-center p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/20 transition">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center font-bold text-white/20">{{ c.name[0] }}</div>
+                                    <div><p class="font-bold">{{ c.name }}</p><p class="text-[10px] text-gray-500 uppercase">{{ c.industry }}</p></div>
                                 </div>
+                                <span class="text-[10px] font-bold bg-white/5 px-3 py-1 rounded-full uppercase tracking-tighter">Client Actif</span>
                             </div>
-                            <span class="text-[10px] font-bold px-3 py-1 bg-green-500/10 text-green-500 rounded-full">ACTIF</span>
                         </div>
                     </div>
                 </div>
-            </section>
+
+                <div v-if="tab === 'pipeline'" class="grid grid-cols-3 gap-8">
+                    <div v-for="status in ['Prospect', 'Proposition', 'Gagné']" class="space-y-6">
+                        <h4 class="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 mb-4 border-b border-white/5 pb-2">{{ status }}</h4>
+                        <div v-for="o in filteredOpp(status)" class="glass p-6 rounded-2xl space-y-4">
+                            <div class="flex justify-between italic font-bold text-sm">
+                                <span>{{ o.title }}</span>
+                                <span class="text-white/40">{{ formatEuro(o.value) }}</span>
+                            </div>
+                            <p class="text-[10px] text-gray-500 uppercase font-bold">{{ o.company_name }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="tab === 'missions'" class="space-y-6">
+                    <div v-for="p in projects" class="glass p-8 rounded-[2rem] flex items-center justify-between">
+                        <div class="flex-1">
+                            <h4 class="text-xl font-bold italic mb-1">{{ p.name }}</h4>
+                            <p class="text-[10px] text-gray-500 uppercase font-black tracking-widest">{{ p.client_name }} — Échéance : {{ p.deadline }}</p>
+                        </div>
+                        <div class="w-64">
+                            <div class="flex justify-between text-[10px] font-bold mb-2 uppercase"><span>Progression</span><span>{{ p.progress }}%</span></div>
+                            <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full bg-white transition-all duration-1000" :style="{width: p.progress + '%'}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </main>
 
-        <div v-if="showModal" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[100] flex items-center justify-center p-6">
-            <div class="glass w-full max-w-md p-10 space-y-6">
-                <h3 class="text-xl font-bold italic tracking-tight">Ajouter un Client</h3>
-                <div class="space-y-4">
-                    <input v-model="form.name" type="text" placeholder="Nom de l'entreprise" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-white/30 transition">
-                    <input v-model="form.industry" type="text" placeholder="Secteur (ex: Luxe, Tech...)" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-white/30 transition">
+        <div v-if="showModal" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] flex items-center justify-center p-6">
+            <div class="glass w-full max-w-md rounded-[3rem] p-12 border-white/20">
+                <h3 class="text-2xl font-bold italic mb-8">Nouveau {{ tab }}</h3>
+                
+                <div v-if="tab === 'dashboard'" class="space-y-4">
+                    <input v-model="form.name" placeholder="Nom de l'entreprise" class="w-full p-4 rounded-xl">
+                    <input v-model="form.industry" placeholder="Secteur" class="w-full p-4 rounded-xl">
                 </div>
-                <div class="flex space-x-3 pt-4">
-                    <button @click="showModal = false" class="flex-1 text-xs font-bold text-gray-500 uppercase">Annuler</button>
-                    <button @click="saveClient" class="btn-main flex-2 px-8 py-4 rounded-xl text-xs uppercase">Enregistrer</button>
+
+                <div v-if="tab === 'pipeline'" class="space-y-4">
+                    <input v-model="form.title" placeholder="Nom de l'opportunité" class="w-full p-4 rounded-xl">
+                    <input v-model="form.company_name" placeholder="Client" class="w-full p-4 rounded-xl">
+                    <input v-model="form.value" type="number" placeholder="Montant (€)" class="w-full p-4 rounded-xl">
+                    <select v-model="form.status" class="w-full p-4 rounded-xl">
+                        <option value="Prospect">Prospect</option>
+                        <option value="Proposition">Proposition</option>
+                        <option value="Gagné">Gagné</option>
+                    </select>
+                </div>
+
+                <div v-if="tab === 'missions'" class="space-y-4">
+                    <input v-model="form.name" placeholder="Nom de la mission" class="w-full p-4 rounded-xl">
+                    <input v-model="form.client_name" placeholder="Client" class="w-full p-4 rounded-xl">
+                    <input v-model="form.progress" type="number" placeholder="Avancement %" class="w-full p-4 rounded-xl">
+                    <input v-model="form.deadline" type="date" class="w-full p-4 rounded-xl">
+                </div>
+
+                <div class="flex space-x-4 mt-10">
+                    <button @click="showModal = false" class="flex-1 text-gray-500 font-bold uppercase text-[10px]">Annuler</button>
+                    <button @click="saveData" class="flex-[2] bg-white text-black py-4 rounded-2xl font-black uppercase text-[11px]">Enregistrer</button>
                 </div>
             </div>
         </div>
@@ -95,13 +144,9 @@
 
     <script>
         const { createApp, ref, onMounted, computed } = Vue;
-
-        // CONFIGURATION SUPABASE FIXE
-        const S_URL = 'https://ufecxdwqmhkxhsfmwrfn.supabase.co';
-        const S_KEY = 'sb_publishable_nnGYFPU5nAEiTda2RIDo9g_923K_NnO';
-        
-        // Nom de variable unique pour éviter tout conflit
-        const stratosDb = window.supabase.createClient(S_URL, S_KEY);
+        const URL = 'https://ufecxdwqmhkxhsfmwrfn.supabase.co';
+        const KEY = 'sb_publishable_nnGYFPU5nAEiTda2RIDo9g_923K_NnO';
+        const sbc = window.supabase.createClient(URL, KEY);
 
         createApp({
             setup() {
@@ -109,41 +154,55 @@
                 const isConnected = ref(false);
                 const showModal = ref(false);
                 const companies = ref([]);
-                const form = ref({ name: '', industry: '' });
+                const opportunities = ref([]);
+                const projects = ref([]);
+                const form = ref({});
 
                 const menu = [
                     { id: 'dashboard', label: 'Dashboard', icon: 'layout-grid' },
-                    { id: 'crm', label: 'Portefeuille', icon: 'users' },
-                    { id: 'finance', label: 'Finance', icon: 'credit-card' }
+                    { id: 'pipeline', label: 'Pipeline', icon: 'target' },
+                    { id: 'missions', label: 'Missions', icon: 'briefcase' }
                 ];
 
-                const fetchData = async () => {
-                    const { data, error } = await stratosDb.from('companies').select('*').order('created_at', { ascending: false });
-                    if (!error) {
-                        companies.value = data;
-                        isConnected.value = true;
-                    } else {
-                        console.error("Erreur de chargement:", error);
-                    }
+                const currentLabel = computed(() => menu.find(m => m.id === tab.value)?.label);
+
+                const stats = computed(() => [
+                    { label: 'Clients', value: companies.value.length },
+                    { label: 'Pipeline', value: formatEuro(opportunities.value.reduce((a, b) => a + (Number(b.value) || 0), 0)) },
+                    { label: 'CA Gagné', value: formatEuro(opportunities.value.filter(o => o.status === 'Gagné').reduce((a, b) => a + (Number(b.value) || 0), 0)) },
+                    { label: 'Projets', value: projects.value.length }
+                ]);
+
+                const formatEuro = (v) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v);
+
+                const load = async () => {
+                    const { data: c } = await sbc.from('companies').select('*');
+                    const { data: o } = await sbc.from('opportunities').select('*');
+                    const { data: p } = await sbc.from('projects').select('*');
+                    companies.value = c || [];
+                    opportunities.value = o || [];
+                    projects.value = p || [];
+                    isConnected.value = true;
                 };
 
-                const saveClient = async () => {
-                    if (!form.value.name) return;
-                    const { error } = await stratosDb.from('companies').insert([form.value]);
+                const openModal = () => {
+                    form.value = (tab.value === 'pipeline') ? { status: 'Prospect' } : {};
+                    showModal.value = true;
+                };
+
+                const saveData = async () => {
+                    const table = tab.value === 'dashboard' ? 'companies' : tab.value;
+                    const { error } = await sbc.from(table).insert([form.value]);
                     if (!error) {
-                        form.value = { name: '', industry: '' };
                         showModal.value = false;
-                        await fetchData();
+                        load();
                     }
                 };
 
-                const pipelineTotal = computed(() => {
-                    return new Intl.NumberFormat('fr-FR').format(0); // On pourra lier les opportunités plus tard
-                });
+                const filteredOpp = (status) => opportunities.value.filter(o => o.status === status);
 
-                onMounted(fetchData);
-
-                return { tab, menu, companies, isConnected, showModal, form, saveClient, pipelineTotal };
+                onMounted(load);
+                return { tab, menu, isConnected, showModal, companies, opportunities, projects, form, stats, currentLabel, openModal, saveData, filteredOpp, formatEuro };
             }
         }).mount('#app');
     </script>
