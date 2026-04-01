@@ -3,183 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STRATOS | CRM Strategic Dashboard</title>
+    <title>STRATOS CRM | Live Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.321.0/font/lucide.min.css" rel="stylesheet">
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
-        
-        :root {
-            --bg-deep: #050505;
-            --card-bg: #0F0F0F;
-            --accent: #FFFFFF;
-            --border: rgba(255, 255, 255, 0.08);
-        }
-
-        body { 
-            background-color: var(--bg-deep); 
-            color: #E0E0E0; 
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            margin: 0;
-            overflow: hidden;
-        }
-
-        .glass-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .glass-card:hover {
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .sidebar-item {
-            transition: all 0.2s;
-        }
-
-        .sidebar-item.active {
-            background: rgba(255, 255, 255, 0.08);
-            color: white;
-            border-right: 2px solid white;
-        }
-
-        .btn-premium {
-            background: white;
-            color: black;
-            font-weight: 700;
-            transition: transform 0.2s;
-        }
-
-        .btn-premium:hover {
-            transform: scale(1.02);
-            background: #f0f0f0;
-        }
-
-        /* Scrollbar élégante */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
+        body { background: #050505; color: #F0F0F0; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; overflow: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); }
+        .sidebar-active { background: white; color: black; font-weight: 800; transform: translateX(5px); }
+        .card-hover:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); }
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div id="app" class="flex h-screen w-full">
         
-        <aside class="w-64 border-r border-white/5 flex flex-col bg-[#080808]">
-            <div class="p-8 flex items-center space-x-3">
-                <div class="w-8 h-8 bg-white rounded flex items-center justify-center">
-                    <i class="lucide-trending-up text-black w-5 h-5"></i>
+        <aside class="w-72 border-r border-white/5 flex flex-col bg-[#080808] z-50">
+            <div class="p-10 flex items-center space-x-3">
+                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-2xl shadow-white/10">
+                    <i class="lucide-trending-up text-black w-6 h-6"></i>
                 </div>
-                <h1 class="text-xl font-extrabold tracking-tighter text-white">STRATOS</h1>
+                <h1 class="text-2xl font-black tracking-tighter text-white">STRATOS</h1>
             </div>
 
-            <nav class="flex-1 px-4 space-y-1">
-                <div v-for="item in menu" :key="item.id" 
-                     @click="currentTab = item.id"
-                     :class="['sidebar-item flex items-center space-x-4 p-3 rounded-lg cursor-pointer text-sm font-medium', currentTab === item.id ? 'active' : 'text-gray-500 hover:text-gray-200']">
-                    <i :class="'lucide-' + item.icon + ' w-4 h-4'"></i>
-                    <span>{{ item.label }}</span>
+            <nav class="flex-1 px-6 space-y-2">
+                <div v-for="m in menu" :key="m.id" @click="tab = m.id"
+                     :class="['flex items-center space-x-4 p-4 rounded-xl cursor-pointer text-sm transition-all duration-300', tab === m.id ? 'sidebar-active shadow-lg shadow-white/5' : 'text-gray-500 hover:text-white hover:bg-white/5']">
+                    <i :class="'lucide-' + m.icon + ' w-5 h-5'"></i>
+                    <span>{{ m.label }}</span>
                 </div>
             </nav>
-
-            <div class="p-6 border-t border-white/5">
-                <div class="flex items-center space-x-3 text-xs text-gray-500">
-                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <span>{{ isConnected ? 'Live Database' : 'Mode Offline' }}</span>
+            
+            <div class="p-8 border-t border-white/5">
+                <div class="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
+                    <div class="flex items-center space-x-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                        <div :class="['w-2 h-2 rounded-full shadow-sm', isConnected ? 'bg-green-500 shadow-green-500/50' : 'bg-red-500']"></div>
+                        <span>{{ isConnected ? 'Database Live' : 'Connecting...' }}</span>
+                    </div>
                 </div>
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col overflow-hidden">
-            
-            <header class="h-20 border-b border-white/5 flex items-center justify-between px-10 bg-black/30 backdrop-blur-md">
+        <main class="flex-1 flex flex-col relative bg-gradient-to-br from-[#050505] to-[#0a0a0a]">
+            <header class="h-24 border-b border-white/5 flex items-center justify-between px-12 backdrop-blur-xl">
                 <div>
-                    <p class="text-[10px] uppercase tracking-[0.3em] text-gray-500 font-bold">{{ currentTab }}</p>
-                    <h2 class="text-xl font-bold text-white">{{ menu.find(m => m.id === currentTab).label }}</h2>
+                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.5em] mb-1">{{ tab }}</p>
+                    <h2 class="text-2xl font-bold text-white tracking-tight">Vue d'ensemble</h2>
                 </div>
-                
-                <div class="flex items-center space-x-6">
-                    <div class="relative">
-                        <i class="lucide-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 w-4 h-4"></i>
-                        <input type="text" placeholder="Rechercher..." class="bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-white/20 w-64">
-                    </div>
-                    <button class="btn-premium px-6 py-2 rounded-full text-xs uppercase tracking-wider">
-                        Nouvelle Action
-                    </button>
-                </div>
+                <button @click="refreshData" class="bg-white/5 hover:bg-white/10 border border-white/10 p-3 rounded-full transition">
+                    <i class="lucide-refresh-cw w-4 h-4 text-white"></i>
+                </button>
             </header>
 
-            <section class="flex-1 p-10 overflow-y-auto">
-                
-                <div v-if="currentTab === 'dashboard'" class="space-y-10 animate-in fade-in duration-500">
+            <section class="flex-1 p-12 overflow-y-auto">
+                <div v-if="tab === 'dashboard'" class="space-y-12 animate-in fade-in duration-700">
+                    
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div v-for="kpi in kpis" :key="kpi.label" class="glass-card p-6">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="text-gray-500 text-[10px] uppercase font-black tracking-widest">{{ kpi.label }}</p>
-                                    <h3 class="text-3xl font-bold mt-2 text-white">{{ kpi.value }}</h3>
-                                </div>
-                                <i :class="'lucide-' + kpi.icon + ' text-gray-600 w-5 h-5'"></i>
+                        <div v-for="k in kpis" class="glass p-8 rounded-[2rem] card-hover">
+                            <div class="flex justify-between items-start mb-4">
+                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">{{ k.label }}</p>
+                                <i :class="'lucide-' + k.icon + ' text-gray-600 w-4 h-4'"></i>
                             </div>
-                            <div class="mt-4 text-[10px] text-green-500 font-bold uppercase italic">
-                                ↑ 12% vs mois dernier
-                            </div>
+                            <h3 class="text-3xl font-bold tracking-tighter text-white">{{ k.value }}</h3>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                        <div class="lg:col-span-2 space-y-6">
-                            <h3 class="text-sm font-black uppercase tracking-widest text-gray-500">Missions Stratégiques</h3>
-                            <div v-for="p in projects" :key="p.id" class="glass-card p-6 flex items-center justify-between">
-                                <div class="flex items-center space-x-4">
-                                    <div class="p-3 bg-white/5 rounded-lg border border-white/5">
-                                        <i class="lucide-briefcase w-5 h-5 text-gray-400"></i>
+                        <div class="lg:col-span-2 glass rounded-[2.5rem] p-10">
+                            <h4 class="text-lg font-bold mb-8 flex items-center space-x-3">
+                                <span>Entreprises Clients</span>
+                                <span class="bg-white/5 text-[10px] px-3 py-1 rounded-full text-gray-500">{{ companies.length }}</span>
+                            </h4>
+                            <div class="space-y-4">
+                                <div v-for="c in companies" class="flex justify-between items-center p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition">
+                                    <div class="flex items-center space-x-5">
+                                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center font-bold text-lg italic">
+                                            {{ c.name[0] }}
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-white">{{ c.name }}</p>
+                                            <p class="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">{{ c.industry || 'Secteur non défini' }}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 class="font-bold text-white">{{ p.name }}</h4>
-                                        <p class="text-xs text-gray-500">{{ p.client }} • Fin prévue : {{ p.deadline }}</p>
-                                    </div>
+                                    <i class="lucide-chevron-right text-gray-700"></i>
                                 </div>
-                                <div class="text-right">
-                                    <p class="font-mono text-sm text-white">{{ p.budget }} €</p>
-                                    <div class="w-32 h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
-                                        <div class="h-full bg-white" :style="{width: p.progress + '%'}"></div>
-                                    </div>
+                                <div v-if="companies.length === 0" class="py-10 text-center text-gray-600 italic text-sm">
+                                    Aucune entreprise trouvée dans la base.
                                 </div>
                             </div>
                         </div>
 
-                        <div class="space-y-6">
-                            <h3 class="text-sm font-black uppercase tracking-widest text-gray-500">Flux Commercial</h3>
-                            <div class="glass-card p-6 space-y-6">
-                                <div v-for="opp in opportunities" :key="opp.id" class="flex items-center justify-between p-2 border-b border-white/5 pb-4">
-                                    <div>
-                                        <p class="text-xs font-bold">{{ opp.title }}</p>
-                                        <p class="text-[10px] text-gray-500 uppercase tracking-tighter">{{ opp.stage }}</p>
+                        <div class="glass rounded-[2.5rem] p-10">
+                            <h4 class="text-lg font-bold mb-8">Pipeline Actif</h4>
+                            <div class="space-y-6">
+                                <div v-for="o in opportunities" class="group">
+                                    <div class="flex justify-between text-xs mb-2">
+                                        <span class="font-bold text-gray-300">{{ o.name }}</span>
+                                        <span class="font-mono text-white">{{ o.value }} €</span>
                                     </div>
-                                    <span class="text-xs font-mono bg-white/5 px-2 py-1 rounded">{{ opp.value }}€</span>
+                                    <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                        <div class="h-full bg-white transition-all duration-1000" :style="{width: o.probability + '%'}"></div>
+                                    </div>
                                 </div>
-                                <button class="w-full py-3 text-[10px] font-black uppercase border border-white/10 rounded-lg hover:bg-white/5 transition">
-                                    Voir tout le pipeline
-                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div v-else class="flex flex-col items-center justify-center h-full text-center space-y-4">
-                    <div class="p-10 border-2 border-dashed border-white/5 rounded-3xl opacity-30">
-                        <i :class="'lucide-' + menu.find(m => m.id === currentTab).icon + ' w-20 h-20 mx-auto'"></i>
-                        <h2 class="text-2xl font-light mt-6">Module {{ currentTab }} prêt</h2>
-                        <p class="text-gray-600 text-sm">Synchronisation avec les tables SQL de Supabase active.</p>
+                <div v-else class="h-full flex items-center justify-center text-center opacity-30">
+                    <div>
+                        <i class="lucide-layers w-20 h-20 mx-auto mb-6"></i>
+                        <h2 class="text-3xl font-light">Module {{ tab }} actif</h2>
+                        <p class="text-sm">En attente de données spécifiques</p>
                     </div>
                 </div>
-
             </section>
         </main>
     </div>
@@ -187,67 +127,57 @@
     <script>
         const { createApp, ref, onMounted } = Vue;
 
-        // ---------------------------------------------------------
-        // CONFIGURATION SUPABASE (Remplace par tes clés !)
-        // ---------------------------------------------------------
+        // --- CONFIGURATION LIVE SUPABASE ---
         const SUPABASE_URL = 'https://ufecxdwqmhkxhsfmwrfn.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_nnGYFPU5nAEiTda2RIDo9g_923K_NnO';
-        
-        let supabaseClient = null;
-        try {
-            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch(e) {
-            console.error("Erreur d'initialisation Supabase");
-        }
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         createApp({
             setup() {
-                const currentTab = ref('dashboard');
+                const tab = ref('dashboard');
                 const isConnected = ref(false);
+                const companies = ref([]);
+                const opportunities = ref([]);
+                const kpis = ref([
+                    { label: 'Entreprises', value: '0', icon: 'building' },
+                    { label: 'Projets', value: '0', icon: 'zap' },
+                    { label: 'Pipeline', value: '0 €', icon: 'target' },
+                    { label: 'Rentabilité', value: '---', icon: 'trending-up' }
+                ]);
 
                 const menu = [
-                    { id: 'dashboard', label: 'Tableau de bord', icon: 'layout-dashboard' },
-                    { id: 'pipeline', label: 'Ventes & Leads', icon: 'target' },
-                    { id: 'missions', label: 'Projets Client', icon: 'briefcase' },
-                    { id: 'crm', label: 'Annuaire Contacts', icon: 'users' },
-                    { id: 'finance', label: 'Comptabilité', icon: 'credit-card' }
+                    { id: 'dashboard', label: 'Tableau de Bord', icon: 'layout-grid' },
+                    { id: 'crm', label: 'CRM & Contacts', icon: 'users' },
+                    { id: 'projets', label: 'Missions', icon: 'briefcase' },
+                    { id: 'finance', label: 'Pilotage CA', icon: 'credit-card' }
                 ];
 
-                const kpis = ref([
-                    { label: 'Chiffre d\'Affaires', value: '24 500€', icon: 'banknote' },
-                    { label: 'Pipeline Pondéré', value: '56 200€', icon: 'pie-chart' },
-                    { label: 'Missions Actives', value: '9', icon: 'zap' },
-                    { label: 'Heures Facturées', value: '142h', icon: 'clock' }
-                ]);
-
-                const projects = ref([
-                    { id: 1, name: 'Audit Stratégique Q3', client: 'L’Oréal Luxe', deadline: '12 Avril', budget: '8 500', progress: 65 },
-                    { id: 2, name: 'Campagne Performance', client: 'Tesla France', deadline: '20 Mai', budget: '12 000', progress: 30 },
-                    { id: 3, name: 'Consulting SEO Technique', client: 'BackMarket', deadline: '05 Avril', budget: '4,500', progress: 90 }
-                ]);
-
-                const opportunities = ref([
-                    { id: 1, title: 'Refonte Site E-com', value: 15000, stage: 'Proposition' },
-                    { id: 2, title: 'Accompagnement annuel', value: 35000, stage: 'Négociation' },
-                    { id: 3, title: 'Audit IA Marketing', value: 5000, stage: 'RDV' }
-                ]);
-
-                onMounted(async () => {
-                    // Test de connexion
-                    if (supabaseClient) {
-                        const { data, error } = await supabaseClient.from('companies').select('count');
-                        if (!error) isConnected.value = true;
+                const refreshData = async () => {
+                    isConnected.value = false;
+                    
+                    // 1. Fetch Companies
+                    const { data: coData, error: coErr } = await supabase.from('companies').select('*').limit(5);
+                    if (!coErr) {
+                        companies.value = coData;
+                        kpis.value[0].value = coData.length;
                     }
+
+                    // 2. Fetch Opportunities
+                    const { data: oppData, error: oppErr } = await supabase.from('opportunities').select('*');
+                    if (!oppErr) {
+                        opportunities.value = oppData;
+                        const totalPipeline = oppData.reduce((acc, curr) => acc + (curr.value || 0), 0);
+                        kpis.value[2].value = new Intl.NumberFormat('fr-FR').format(totalPipeline) + ' €';
+                    }
+
+                    isConnected.value = true;
+                };
+
+                onMounted(() => {
+                    refreshData();
                 });
 
-                return {
-                    currentTab,
-                    menu,
-                    kpis,
-                    projects,
-                    opportunities,
-                    isConnected
-                };
+                return { tab, menu, kpis, companies, opportunities, isConnected, refreshData };
             }
         }).mount('#app');
     </script>
