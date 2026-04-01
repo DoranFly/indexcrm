@@ -3,198 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STRATOS | CRM Strategic</title>
+    <title>STRATOS CRM</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.321.0/font/lucide.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
-        body { background: #050505; color: #F0F0F0; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; overflow: hidden; }
-        .glass { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); }
-        .sidebar-active { background: white; color: black; font-weight: 800; }
-        .btn-primary { background: white; color: black; transition: all 0.2s; font-weight: 700; }
-        .btn-primary:hover { transform: scale(1.05); background: #e5e5e5; }
-        .modal-bg { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
-        input, select, textarea { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-    </style>
 </head>
-<body>
-    <div id="app" class="flex h-screen w-full">
+<body class="bg-black text-white font-sans">
+    <div id="app" class="p-10">
         
-        <aside class="w-72 border-r border-white/5 flex flex-col bg-[#080808] z-50">
-            <div class="p-10 flex items-center space-x-3">
-                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-                    <i class="lucide-trending-up text-black w-6 h-6"></i>
-                </div>
-                <h1 class="text-2xl font-black tracking-tighter text-white uppercase">Stratos</h1>
+        <div class="flex justify-between items-center mb-10 border-b border-white/10 pb-5">
+            <h1 class="text-3xl font-black italic">STRATOS CRM</h1>
+            <button @click="openModal" class="bg-white text-black px-6 py-2 rounded-full font-bold hover:bg-gray-200 transition">
+                + NOUVEAU CLIENT
+            </button>
+        </div>
+
+        <div class="grid gap-4">
+            <div v-for="c in companies" :key="c.id" class="p-5 bg-white/5 border border-white/10 rounded-2xl">
+                <p class="font-bold text-xl">{{ c.name }}</p>
+                <p class="text-gray-500 text-sm uppercase tracking-widest">{{ c.industry }}</p>
             </div>
-
-            <nav class="flex-1 px-6 space-y-2">
-                <div v-for="m in menu" :key="m.id" @click="tab = m.id"
-                     :class="['flex items-center space-x-4 p-4 rounded-xl cursor-pointer text-sm transition-all', tab === m.id ? 'sidebar-active' : 'text-gray-500 hover:text-white hover:bg-white/5']">
-                    <i :class="'lucide-' + m.icon + ' w-5 h-5'"></i>
-                    <span>{{ m.label }}</span>
-                </div>
-            </nav>
-            
-            <div class="p-8 border-t border-white/5 text-[10px] text-gray-600 flex justify-between items-center">
-                <span>DATABASE LIVE</span>
-                <div :class="['w-2 h-2 rounded-full', isConnected ? 'bg-green-500' : 'bg-red-500']"></div>
+            <div v-if="companies.length === 0" class="text-center py-20 text-gray-700 italic">
+                Aucun client trouvé. Cliquez sur le bouton en haut pour en ajouter un.
             </div>
-        </aside>
+        </div>
 
-        <main class="flex-1 flex flex-col relative bg-[#050505]">
-            <header class="h-24 border-b border-white/5 flex items-center justify-between px-12">
-                <div>
-                    <p class="text-[10px] font-black text-gray-600 uppercase tracking-[0.5em] mb-1">{{ tab }}</p>
-                    <h2 class="text-2xl font-bold text-white tracking-tight italic">Operations Hub</h2>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <button @click="showModal = true" class="btn-primary px-6 py-2.5 rounded-full text-xs uppercase tracking-widest">
-                        + Nouveau Client
-                    </button>
-                </div>
-            </header>
-
-            <section class="flex-1 p-12 overflow-y-auto">
-                <div v-if="tab === 'dashboard'" class="space-y-12 animate-in fade-in duration-700">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div v-for="k in kpis" class="glass p-8 rounded-[2rem]">
-                            <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">{{ k.label }}</p>
-                            <h3 class="text-3xl font-bold text-white">{{ k.value }}</h3>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                        <div class="lg:col-span-2 glass rounded-[2.5rem] p-10">
-                            <div class="flex justify-between items-center mb-8">
-                                <h4 class="text-lg font-bold">Portefeuille Clients</h4>
-                                <button @click="refreshData" class="text-gray-500 hover:text-white"><i class="lucide-rotate-cw w-4 h-4"></i></button>
-                            </div>
-                            <div class="space-y-4">
-                                <div v-for="c in companies" class="flex justify-between items-center p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/20 transition">
-                                    <div class="flex items-center space-x-5">
-                                        <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center font-bold text-lg italic text-white/20">
-                                            {{ c.name[0] }}
-                                        </div>
-                                        <div>
-                                            <p class="font-bold text-white leading-none">{{ c.name }}</p>
-                                            <p class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{{ c.industry || 'Conseil' }}</p>
-                                        </div>
-                                    </div>
-                                    <span class="text-[10px] font-bold text-gray-600 bg-white/5 px-3 py-1 rounded-full uppercase italic tracking-tighter">Active</span>
-                                </div>
-                                <div v-if="companies.length === 0" class="text-center py-20 opacity-20 italic">Aucun client enregistré.</div>
-                            </div>
-                        </div>
-
-                        <div class="glass rounded-[2.5rem] p-10">
-                            <h4 class="text-lg font-bold mb-8 italic text-white/50">Flux Opportunités</h4>
-                            <div class="space-y-8">
-                                <div v-for="o in opportunities">
-                                    <div class="flex justify-between text-xs mb-2 uppercase font-black tracking-tighter">
-                                        <span>{{ o.name }}</span>
-                                        <span class="text-white">{{ o.value }}€</span>
-                                    </div>
-                                    <div class="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                                        <div class="h-full bg-white transition-all duration-1000" :style="{width: o.probability + '%'}"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <div v-if="showModal" class="fixed inset-0 z-[100] modal-bg flex items-center justify-center p-6">
-            <div class="bg-[#0f0f0f] w-full max-w-md rounded-[2.5rem] p-10 border border-white/10 shadow-2xl animate-in zoom-in-95 duration-200">
-                <h3 class="text-2xl font-bold mb-6 italic tracking-tight text-white">Nouveau Client</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-2">Nom de l'entreprise</label>
-                        <input v-model="newCompany.name" type="text" class="w-full px-5 py-4 rounded-2xl outline-none focus:border-white/40 transition">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-2">Secteur d'activité</label>
-                        <input v-model="newCompany.industry" type="text" class="w-full px-5 py-4 rounded-2xl outline-none focus:border-white/40 transition">
-                    </div>
-                    <div class="flex space-x-3 pt-6">
-                        <button @click="showModal = false" class="flex-1 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest hover:text-white">Annuler</button>
-                        <button @click="addCompany" class="btn-primary flex-[2] py-4 rounded-2xl text-xs uppercase tracking-widest">Enregistrer</button>
-                    </div>
+        <div v-if="showModal" class="fixed inset-0 bg-black/90 flex items-center justify-center p-5 z-50">
+            <div class="bg-[#111] p-10 rounded-[2rem] border border-white/20 w-full max-w-md">
+                <h2 class="text-2xl font-bold mb-6">Ajouter un client</h2>
+                <input v-model="form.name" placeholder="Nom de l'entreprise" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl mb-4 outline-none focus:border-white">
+                <input v-model="form.industry" placeholder="Secteur (ex: Luxe, Tech)" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl mb-6 outline-none focus:border-white">
+                
+                <div class="flex space-x-4">
+                    <button @click="showModal = false" class="flex-1 text-gray-500 font-bold">Annuler</button>
+                    <button @click="saveClient" class="flex-1 bg-white text-black py-4 rounded-xl font-bold">Enregistrer</button>
                 </div>
             </div>
         </div>
+
     </div>
 
     <script>
         const { createApp, ref, onMounted } = Vue;
 
-        const SUPABASE_URL = 'https://ufecxdwqmhkxhsfmwrfn.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_nnGYFPU5nAEiTda2RIDo9g_923K_NnO';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // TES INFOS SUPABASE
+        const URL = 'https://ufecxdwqmhkxhsfmwrfn.supabase.co';
+        const KEY = 'sb_publishable_nnGYFPU5nAEiTda2RIDo9g_923K_NnO';
+        const supabase = window.supabase.createClient(URL, KEY);
 
         createApp({
             setup() {
-                const tab = ref('dashboard');
-                const isConnected = ref(false);
                 const showModal = ref(false);
                 const companies = ref([]);
-                const opportunities = ref([]);
-                
-                const newCompany = ref({ name: '', industry: '' });
+                const form = ref({ name: '', industry: '' });
 
-                const menu = [
-                    { id: 'dashboard', label: 'Dashboard', icon: 'layout-grid' },
-                    { id: 'projets', label: 'Missions', icon: 'briefcase' },
-                    { id: 'finance', label: 'Pilotage CA', icon: 'credit-card' }
-                ];
-
-                const kpis = ref([
-                    { label: 'Clients', value: '0', icon: 'users' },
-                    { label: 'Pipeline', value: '0€', icon: 'target' },
-                    { label: 'Facturé', value: '0€', icon: 'trending-up' },
-                    { label: 'Marge Moy', value: '---', icon: 'zap' }
-                ]);
-
-                const refreshData = async () => {
-                    isConnected.value = false;
-                    const { data: coData } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
-                    const { data: oppData } = await supabase.from('opportunities').select('*');
-                    
-                    if (coData) {
-                        companies.value = coData;
-                        kpis.value[0].value = coData.length;
-                    }
-                    if (oppData) {
-                        opportunities.value = oppData;
-                        const total = oppData.reduce((acc, c) => acc + (c.value || 0), 0);
-                        kpis.value[1].value = new Intl.NumberFormat('fr-FR').format(total) + ' €';
-                    }
-                    isConnected.value = true;
+                const openModal = () => {
+                    console.log("Bouton cliqué !");
+                    showModal.value = true;
                 };
 
-                const addCompany = async () => {
-                    if (!newCompany.value.name) return;
-                    const { error } = await supabase.from('companies').insert([{ 
-                        name: newCompany.value.name, 
-                        industry: newCompany.value.industry 
-                    }]);
+                const loadData = async () => {
+                    const { data } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
+                    if (data) companies.value = data;
+                };
+
+                const saveClient = async () => {
+                    if (!form.value.name) return alert("Nom requis");
                     
-                    if (!error) {
-                        newCompany.value = { name: '', industry: '' };
+                    const { error } = await supabase.from('companies').insert([
+                        { name: form.value.name, industry: form.value.industry }
+                    ]);
+
+                    if (error) {
+                        alert("Erreur Supabase : " + error.message);
+                    } else {
+                        form.value = { name: '', industry: '' };
                         showModal.value = false;
-                        refreshData();
+                        loadData();
                     }
                 };
 
-                onMounted(refreshData);
+                onMounted(loadData);
 
-                return { tab, menu, kpis, companies, opportunities, isConnected, showModal, newCompany, addCompany, refreshData };
+                return { showModal, companies, form, openModal, saveClient };
             }
         }).mount('#app');
     </script>
